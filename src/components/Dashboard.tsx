@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthService } from '../../services/db';
 import { User, LOGO_URL, BADGE_MAP } from '../../types';
 import { Button } from '../../ui/button';
-import { LogOut, Edit3, Eye, Award, Monitor, Music, Volume2, Share2, Check, AlertTriangle } from 'lucide-react';
+import { LogOut, Edit3, Eye, Award, Monitor, Music, Volume2, Share2, Check, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropInput } from '../../ui/DragDropInput';
 
@@ -54,10 +54,27 @@ export const Dashboard: React.FC = () => {
 
   const handleCopyLink = () => {
     if (user) {
-        const url = `${window.location.origin}/u/${user.username}`;
-        navigator.clipboard.writeText(url);
-        setCopyFeedback(true);
-        setTimeout(() => setCopyFeedback(false), 2000);
+        // Validation: Check for Data URIs (Local files)
+        const isLocalAvatar = formData.avatarUrl.startsWith('data:');
+        const isLocalBg = formData.cardBackgroundUrl.startsWith('data:');
+        
+        if (isLocalAvatar || isLocalBg) {
+            alert("⚠️ SYSTEM WARNING: TRANSMISSION ERROR\n\nYou are using local file uploads (Data URIs). These are too large to share via a link.\n\nTO FIX:\n1. Upload your images to a host (Imgur, Discord, etc).\n2. Paste the direct URL into the fields.\n3. Save and try sharing again.");
+            return;
+        }
+
+        try {
+            // Encode profile data into URL for serverless sharing
+            const payload = btoa(JSON.stringify(formData));
+            const url = `${window.location.origin}/u/${user.username}?data=${payload}`;
+            
+            navigator.clipboard.writeText(url);
+            setCopyFeedback(true);
+            setTimeout(() => setCopyFeedback(false), 2000);
+        } catch (e) {
+            console.error("Encoding error", e);
+            alert("Profile data too complex to encode.");
+        }
     }
   };
 
@@ -91,10 +108,10 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-4">
                 <button 
                     onClick={handleCopyLink}
-                    className="text-xs font-mono text-neutral-500 hover:text-white transition-colors flex items-center gap-2 mr-4 border border-transparent hover:border-neutral-800 px-2 py-1"
+                    className="text-xs font-mono text-neutral-500 hover:text-white transition-colors flex items-center gap-2 mr-4 border border-neutral-800 hover:border-white px-3 py-2 bg-neutral-900/50 hover:bg-neutral-800"
                 >
-                    {copyFeedback ? <Check size={14} className="text-green-500" /> : <Share2 size={14} />}
-                    {copyFeedback ? <span className="text-green-500">COPIED</span> : 'SHARE LINK'}
+                    {copyFeedback ? <Check size={14} className="text-green-500" /> : <LinkIcon size={14} />}
+                    {copyFeedback ? <span className="text-green-500">LINK GENERATED</span> : 'GENERATE SHAREABLE LINK'}
                 </button>
 
                 <button onClick={() => navigate(`/u/${user.username}`)} className="text-xs font-mono text-neutral-500 hover:text-white transition-colors flex items-center gap-2">
@@ -221,20 +238,20 @@ export const Dashboard: React.FC = () => {
                         </h4>
                         
                         <DragDropInput
-                            label="Avatar (Image/MP4/GIF)"
+                            label="Avatar (URL or Upload)"
                             value={formData.avatarUrl}
                             onChange={val => setFormData({...formData, avatarUrl: val})}
-                            placeholder="https://example.com/pfp.mp4 or Drag & Drop"
-                            helperText="Supports Images, MP4, WebM. Large files supported via secure DB."
+                            placeholder="https://example.com/pfp.mp4"
+                            helperText="For sharing links to work, please use an External URL."
                         />
 
                         <div className="space-y-4">
                             <DragDropInput
-                                label="Page Background (Image/MP4)"
+                                label="Page Background (URL or Upload)"
                                 value={formData.cardBackgroundUrl}
                                 onChange={val => setFormData({...formData, cardBackgroundUrl: val})}
-                                placeholder="https://example.com/bg.mp4 or Drag & Drop"
-                                helperText="Full screen background. Animated supported."
+                                placeholder="https://example.com/bg.mp4"
+                                helperText="For sharing links to work, please use an External URL."
                             />
                             
                             {/* Video Audio Toggle */}
@@ -272,12 +289,12 @@ export const Dashboard: React.FC = () => {
                              <Music size={14} /> Audio Configuration
                         </h4>
                         <DragDropInput
-                            label="Profile Background Music (MP3/WAV)"
+                            label="Profile Background Music (URL)"
                             value={formData.backgroundMusicUrl}
                             onChange={val => setFormData({...formData, backgroundMusicUrl: val})}
                             accept="audio/*"
-                            placeholder="https://example.com/song.mp3 or Drag & Drop"
-                            helperText="Separate music track. If used with video audio, both will play."
+                            placeholder="https://example.com/song.mp3"
+                            helperText="External URLs highly recommended for sharing."
                         />
                     </div>
 

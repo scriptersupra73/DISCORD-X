@@ -1,16 +1,28 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { AuthService } from '../../services/db';
 import { User, LOGO_URL, BADGE_MAP } from '../../types';
 import { Button } from '../../ui/button';
-import { UserPlus, ShieldCheck, CornerDownRight, Zap, Volume2, VolumeX, Power, AlertTriangle } from 'lucide-react';
+import {
+  UserPlus,
+  ShieldCheck,
+  CornerDownRight,
+  Zap,
+  Volume2,
+  VolumeX,
+  Power,
+  AlertTriangle,
+  CloudOff
+} from 'lucide-react';
 import { MouseTrail } from '../../ui/MouseTrail';
 
 export const PublicProfile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
+  const [searchParams] = useSearchParams();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
+  const [isRemoteHydrated, setIsRemoteHydrated] = useState(false);
   
   // Audio State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -21,8 +33,39 @@ export const PublicProfile: React.FC = () => {
   useEffect(() => {
     const fetchUser = async () => {
         if (username) {
-            const user = await AuthService.getUserByUsername(username);
-            setProfileUser(user);
+            // 1. Try Local DB
+            const localUser = await AuthService.getUserByUsername(username);
+            
+            if (localUser) {
+                setProfileUser(localUser);
+            } else {
+                // 2. Try URL Hydration (Fix for 404 on shared links)
+                const encodedData = searchParams.get('data');
+                if (encodedData) {
+                    try {
+                        const parsedProfile = JSON.parse(atob(encodedData));
+                        
+                        // Construct transient user object
+                        const hydratedUser: User = {
+                            username: username,
+                            passwordHash: '', // Not needed for display
+                            createdAt: Date.now(),
+                            badges: ['init'], // Default badge for remote view
+                            profile: parsedProfile
+                        };
+                        
+                        // Owner spoof check logic (optional, keeps consistency)
+                        if (username.toLowerCase() === 'discord x') {
+                             hydratedUser.badges = ['owner', 'icon', 'popular'];
+                        }
+
+                        setProfileUser(hydratedUser);
+                        setIsRemoteHydrated(true);
+                    } catch (e) {
+                        console.error("Failed to hydrate profile from URL", e);
+                    }
+                }
+            }
             
             // Check spam protection status
             if (AuthService.hasInteracted(username)) {
@@ -32,7 +75,7 @@ export const PublicProfile: React.FC = () => {
         setLoading(false);
     };
     fetchUser();
-  }, [username]);
+  }, [username, searchParams]);
 
   // Handle Separate Music Playback
   useEffect(() => {
@@ -106,9 +149,18 @@ export const PublicProfile: React.FC = () => {
 
   if (!profileUser) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center text-white">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="font-mono text-neutral-500 text-xs mb-8">USER_NOT_FOUND_IN_REGISTRY</p>
+      <div className="h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center">
+        <h1 className="text-4xl font-bold mb-4 text-neutral-800">404</h1>
+        <div className="flex flex-col items-center gap-4 mb-8">
+            <CloudOff size={48} className="text-neutral-700" />
+            <p className="font-mono text-neutral-500 text-xs">
+                DATA_PACKET_MISSING_IN_LOCAL_REGISTRY
+            </p>
+            <p className="font-sans text-neutral-400 text-sm max-w-md leading-relaxed">
+                The profile you are trying to access does not exist on this terminal. 
+                If this is a shared link, ensure the URL contains the encrypted <code className="bg-neutral-900 px-1 border border-neutral-800">?data=</code> payload.
+            </p>
+        </div>
         <Link to="/" className="border border-white px-6 py-2 hover:bg-white hover:text-black transition-all font-mono text-xs">RETURN HOME</Link>
       </div>
     );
@@ -237,6 +289,13 @@ export const PublicProfile: React.FC = () => {
                             <span className="text-[10px] font-mono text-red-500 tracking-[0.5em] uppercase flex items-center justify-center gap-2">
                                 <AlertTriangle size={10} /> System Administrator
                             </span>
+                        </div>
+                    )}
+
+                    {/* Remote Warning */}
+                    {isRemoteHydrated && !isOwner && (
+                        <div className="mb-4 text-[9px] font-mono text-neutral-500 border border-neutral-800 px-2 py-1 bg-black/80">
+                            REMOTE_DATA_STREAM
                         </div>
                     )}
 
