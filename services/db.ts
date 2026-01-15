@@ -1,30 +1,27 @@
 import { User, UserProfile, DEFAULT_AVATAR } from '../types';
 
 const DB_NAME = 'discord_x_db';
-const DB_VERSION = 2; // Incremented for schema changes
+const DB_VERSION = 2;
 const STORE_USERS = 'users';
 const STORE_LOGS = 'audit_logs';
 const SESSION_KEY = 'discord_x_session';
 const INTERACTION_KEY = 'dx_interaction_history';
 
 // --- IndexedDB Helpers ---
-
 const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
-    
+
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      
-      // Store 1: Users
+
       if (!db.objectStoreNames.contains(STORE_USERS)) {
         db.createObjectStore(STORE_USERS, { keyPath: 'username' });
       }
 
-      // Store 2: Audit Logs (New for V2)
       if (!db.objectStoreNames.contains(STORE_LOGS)) {
         const logStore = db.createObjectStore(STORE_LOGS, { keyPath: 'id', autoIncrement: true });
         logStore.createIndex('timestamp', 'timestamp', { unique: false });
@@ -34,7 +31,11 @@ const openDB = (): Promise<IDBDatabase> => {
   });
 };
 
-const dbAction = async <T>(storeName: string, mode: IDBTransactionMode, callback: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> => {
+const dbAction = async <T>(
+  storeName: string,
+  mode: IDBTransactionMode,
+  callback: (store: IDBObjectStore) => IDBRequest<T>
+): Promise<T> => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, mode);
@@ -48,20 +49,21 @@ const dbAction = async <T>(storeName: string, mode: IDBTransactionMode, callback
 
 // --- Internal Logger ---
 const logEvent = async (type: string, details: any) => {
-    try {
-        await dbAction(STORE_LOGS, 'readwrite', (store) => store.add({
-            type,
-            details,
-            timestamp: Date.now(),
-            sessionId: localStorage.getItem(SESSION_KEY) || 'ANONYMOUS'
-        }));
-    } catch (e) {
-        console.warn("Audit Log Failed", e);
-    }
+  try {
+    await dbAction(STORE_LOGS, 'readwrite', (store) =>
+      store.add({
+        type,
+        details,
+        timestamp: Date.now(),
+        sessionId: localStorage.getItem(SESSION_KEY) || 'ANONYMOUS'
+      })
+    );
+  } catch (e) {
+    console.warn('Audit Log Failed', e);
+  }
 };
 
-// --- Auth Service (Async) ---
-
+// --- Auth Service ---
 export const AuthService = {
   login: async (username: string, password: string): Promise<boolean> => {
     try {
@@ -74,7 +76,7 @@ export const AuthService = {
       await logEvent('AUTH_LOGIN_FAIL', { username });
       return false;
     } catch (e) {
-      console.error("Login Error:", e);
+      console.error('Login Error:', e);
       return false;
     }
   },
@@ -91,16 +93,16 @@ export const AuthService = {
         badges: ['init'],
         profile: {
           displayName: username,
-          bio: "I am a mystery.",
+          bio: 'I am a mystery.',
           discordId: username,
           avatarUrl: DEFAULT_AVATAR,
-          bannerUrl: "https://picsum.photos/800/300?grayscale",
-          tagline: "Discord X User",
+          bannerUrl: 'https://picsum.photos/800/300?grayscale',
+          tagline: 'Discord X User',
           friendRequestsReceived: 0,
-          cardBackgroundUrl: "",
+          cardBackgroundUrl: '',
           keepBackgroundAudio: false,
           enableMouseTrail: true,
-          backgroundMusicUrl: ""
+          backgroundMusicUrl: ''
         }
       };
 
@@ -109,7 +111,7 @@ export const AuthService = {
       await logEvent('AUTH_REGISTER', { username });
       return true;
     } catch (e) {
-      console.error("Register Error:", e);
+      console.error('Register Error:', e);
       return false;
     }
   },
@@ -140,7 +142,7 @@ export const AuthService = {
   updateProfile: async (updates: Partial<UserProfile>) => {
     const username = localStorage.getItem(SESSION_KEY);
     if (!username) return;
-    
+
     try {
       const user = await dbAction<User>(STORE_USERS, 'readonly', (store) => store.get(username));
       if (user) {
@@ -149,48 +151,42 @@ export const AuthService = {
         await logEvent('PROFILE_UPDATE', { username, fields: Object.keys(updates) });
       }
     } catch (e) {
-      console.error("Update Profile Error:", e);
-      alert("Error saving profile. The file might be corrupted or too complex for the browser.");
+      console.error('Update Profile Error:', e);
+      alert('Error saving profile. The file might be corrupted or too complex for the browser.');
     }
   },
 
-  // --- Interaction Logic with Spam Protection ---
-
   hasInteracted: (targetUsername: string): boolean => {
-      try {
-          const history = JSON.parse(localStorage.getItem(INTERACTION_KEY) || '[]');
-          return history.includes(targetUsername);
-      } catch {
-          return false;
-      }
+    try {
+      const history = JSON.parse(localStorage.getItem(INTERACTION_KEY) || '[]');
+      return history.includes(targetUsername);
+    } catch {
+      return false;
+    }
   },
 
   addFriendInteraction: async (targetUsername: string): Promise<boolean> => {
     try {
-      // 1. Spam Check (Client Side)
       const history = JSON.parse(localStorage.getItem(INTERACTION_KEY) || '[]');
       if (history.includes(targetUsername)) {
-          console.warn(`Spam Blocked: Already added ${targetUsername}`);
-          return false;
+        console.warn(`Spam Blocked: Already added ${targetUsername}`);
+        return false;
       }
 
-      // 2. Database Update
       const user = await dbAction<User>(STORE_USERS, 'readonly', (store) => store.get(targetUsername));
       if (user) {
         user.profile.friendRequestsReceived += 1;
-        
-        // Badge Logic
+
         const count = user.profile.friendRequestsReceived;
         const badges = new Set(user.badges);
-        
+
         if (count >= 1) badges.add('first_contact');
         if (count >= 10) badges.add('popular');
         if (count >= 100) badges.add('icon');
 
         user.badges = Array.from(badges);
         await dbAction(STORE_USERS, 'readwrite', (store) => store.put(user));
-        
-        // 3. Update Local History (Prevent future spam)
+
         history.push(targetUsername);
         localStorage.setItem(INTERACTION_KEY, JSON.stringify(history));
 
@@ -199,7 +195,7 @@ export const AuthService = {
       }
       return false;
     } catch (e) {
-      console.error("Interaction Error:", e);
+      console.error('Interaction Error:', e);
       return false;
     }
   }
