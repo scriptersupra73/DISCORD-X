@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AuthService } from '../../services/db';
 import { User, LOGO_URL, BADGE_MAP } from '../../types';
 import { Button } from '../../ui/button';
-import { LogOut, Edit3, Eye, Award, Monitor, Music, Volume2, Share2, Check } from 'lucide-react';
+import { LogOut, Edit3, Eye, Award, Monitor, Music, Volume2, Share2, Check, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropInput } from '../../ui/DragDropInput';
 
@@ -75,15 +75,18 @@ export const Dashboard: React.FC = () => {
   if (!user) return <div className="min-h-screen bg-black text-white flex items-center justify-center font-mono">LOADING_DATABASE...</div>;
 
   const isVideo = (url: string) => url.match(/\.(mp4|webm|mov)$/i) || url.startsWith('data:video');
+  const isOwner = user.badges.includes('owner');
 
   return (
     <div className="min-h-screen bg-black text-neutral-200 font-sans selection:bg-white selection:text-black">
       {/* Navigation */}
-      <nav className="border-b border-neutral-900 bg-black/50 backdrop-blur-md sticky top-0 z-40">
+      <nav className={`border-b backdrop-blur-md sticky top-0 z-40 ${isOwner ? 'bg-red-950/20 border-red-900/50' : 'bg-black/50 border-neutral-900'}`}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-4">
                  <img src={LOGO_URL} alt="Logo" className="w-8 h-8 object-contain" />
-                 <span className="font-bold tracking-widest text-white">DISCORD X // COMMAND</span>
+                 <span className={`font-bold tracking-widest ${isOwner ? 'text-red-500' : 'text-white'}`}>
+                    DISCORD X // {isOwner ? 'SYSTEM ADMIN' : 'COMMAND'}
+                 </span>
             </div>
             <div className="flex items-center gap-4">
                 <button 
@@ -108,9 +111,9 @@ export const Dashboard: React.FC = () => {
         
         {/* Left Column: Stats & Badges */}
         <div className="space-y-8">
-            <div className="bg-neutral-950 border border-neutral-900 p-6">
+            <div className={`p-6 border ${isOwner ? 'bg-red-950/10 border-red-900/40' : 'bg-neutral-950 border-neutral-900'}`}>
                 <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden">
+                    <div className={`w-16 h-16 flex items-center justify-center overflow-hidden border ${isOwner ? 'bg-black border-red-500 shadow-[0_0_10px_rgba(220,38,38,0.3)]' : 'bg-neutral-900 border-neutral-800'}`}>
                          {isVideo(user.profile.avatarUrl) ? (
                             <video src={user.profile.avatarUrl} autoPlay loop muted playsInline className="w-full h-full object-cover grayscale opacity-80" />
                          ) : (
@@ -118,19 +121,21 @@ export const Dashboard: React.FC = () => {
                          )}
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white uppercase">{user.username}</h2>
+                        <h2 className={`text-xl font-bold uppercase ${isOwner ? 'text-red-500' : 'text-white'}`}>{user.username}</h2>
                         <p className="text-xs font-mono text-neutral-500">ID: {Date.now().toString().slice(-6)}</p>
                     </div>
                 </div>
                 
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+                    <div className={`flex justify-between items-center border-b pb-2 ${isOwner ? 'border-red-900/30' : 'border-neutral-900'}`}>
                         <span className="text-xs font-mono text-neutral-500 uppercase">Requests Received</span>
                         <span className="text-xl font-bold text-white">{user.profile.friendRequestsReceived}</span>
                     </div>
-                    <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+                    <div className={`flex justify-between items-center border-b pb-2 ${isOwner ? 'border-red-900/30' : 'border-neutral-900'}`}>
                         <span className="text-xs font-mono text-neutral-500 uppercase">System Status</span>
-                        <span className="text-xs font-mono text-green-500">ONLINE</span>
+                        <span className={`text-xs font-mono ${isOwner ? 'text-red-500 animate-pulse' : 'text-green-500'}`}>
+                            {isOwner ? 'ROOT ACCESS' : 'ONLINE'}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -153,8 +158,8 @@ export const Dashboard: React.FC = () => {
         {/* Right Column: Editor */}
         <div className="lg:col-span-2">
             <div className="bg-neutral-950 border border-neutral-900 p-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                    <Edit3 size={120} />
+                <div className={`absolute top-0 right-0 p-4 opacity-10 pointer-events-none ${isOwner ? 'text-red-900' : 'text-white'}`}>
+                    {isOwner ? <AlertTriangle size={120} /> : <Edit3 size={120} />}
                 </div>
 
                 <h3 className="text-lg font-bold text-white uppercase tracking-widest mb-8 border-b border-neutral-900 pb-4">

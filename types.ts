@@ -33,6 +33,7 @@ export const LOGO_URL = "https://i.imgur.com/aaWKLXX.png";
 export const SONG_URL_1 = "https://files.catbox.moe/3rccvf.mp3"; 
 
 export const BADGE_MAP: Record<string, { label: string, color: string, icon?: string }> = {
+    'owner': { label: 'SYSTEM_OWNER', color: 'bg-red-600 text-black border border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.8)] animate-pulse' },
     'init': { label: 'INITIATE', color: 'bg-neutral-800 text-neutral-400' },
     'first_contact': { label: 'FIRST CONTACT', color: 'bg-white text-black' },
     'popular': { label: 'POPULAR', color: 'bg-neutral-200 text-black border border-white' },
