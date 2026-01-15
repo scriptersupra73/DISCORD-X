@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { AuthService } from '../services/db';
+import { AuthService } from '../../services/db';
 import { Button } from './ui/Button';
 import { useNavigate, Link } from 'react-router-dom';
-import { LOGO_URL } from '../types';
+import { LOGO_URL } from '../../types';
 
 export const Auth: React.FC<{ mode: 'login' | 'register' }> = ({ mode }) => {
   const [username, setUsername] = useState('');

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LOGO_URL, SONG_URL_1 } from '../types';
-import { Volume2, VolumeX } from 'lucide-react';
+import { LOGO_URL, SONG_URL_1 } from '../../types';
 
 interface IntroProps {
   onComplete: () => void;
@@ -12,14 +11,17 @@ export const Intro: React.FC<IntroProps> = ({ onComplete }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Pick random song (Simulated randomization between the provided valid link and itself for now, 
-    // as only one valid audio link was provided. The image link cannot be played.)
-    const songs = [SONG_URL_1]; 
-    const randomSong = songs[Math.floor(Math.random() * songs.length)];
-    
-    audioRef.current = new Audio(randomSong);
-    audioRef.current.loop = true;
-    audioRef.current.volume = 0.5;
+    try {
+      // Pick random song
+      const songs = [SONG_URL_1]; 
+      const randomSong = songs[Math.floor(Math.random() * songs.length)];
+      
+      audioRef.current = new Audio(randomSong);
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.5;
+    } catch (e) {
+      console.warn("Audio initialization failed", e);
+    }
 
     return () => {
       if (audioRef.current) {
@@ -31,7 +33,7 @@ export const Intro: React.FC<IntroProps> = ({ onComplete }) => {
 
   const handleEnter = () => {
     if (audioRef.current) {
-      audioRef.current.play().catch(e => console.error("Audio play failed", e));
+      audioRef.current.play().catch(e => console.error("Audio play failed (Autoplay blocked)", e));
     }
     setEntered(true);
     

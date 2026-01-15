@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Intro } from './components/Intro';
 import { Auth } from './components/Auth';
@@ -7,9 +7,6 @@ import { PublicProfile } from './components/PublicProfile';
 
 const App: React.FC = () => {
   const [introComplete, setIntroComplete] = useState(false);
-
-  // Check if intro has been seen in this session (optional, but requested behavior implies "every time" or on landing)
-  // For this app, we make the landing page the intro.
 
   return (
     <BrowserRouter>
@@ -28,6 +25,8 @@ const App: React.FC = () => {
         <Route path="/register" element={<Auth mode="register" />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/u/:username" element={<PublicProfile />} />
+        {/* Catch-all redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

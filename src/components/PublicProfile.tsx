@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { AuthService } from '../services/db';
-import { User, LOGO_URL, BADGE_MAP } from '../types';
+import { AuthService } from '../../services/db';
+import { User, LOGO_URL, BADGE_MAP } from '../../types';
 import { Button } from './ui/Button';
 import { UserPlus, ShieldCheck, CornerDownRight, Zap, Volume2, VolumeX, Power } from 'lucide-react';
 import { MouseTrail } from './ui/MouseTrail';

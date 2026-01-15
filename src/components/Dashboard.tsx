@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AuthService } from '../services/db';
-import { User, LOGO_URL, BADGE_MAP } from '../types';
+import { AuthService } from '../../services/db';
+import { User, LOGO_URL, BADGE_MAP } from '../../types';
 import { Button } from './ui/Button';
 import { LogOut, Edit3, Eye, Award, Monitor, Music, Volume2, Share2, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
